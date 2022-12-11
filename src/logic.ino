@@ -186,3 +186,72 @@ void photoResistorOperations() {// обробка дій фоторезисто�
 #endif
 }
 
+void lightDuringNightOperation() { 
+  TIMER(60000) {
+   lightDuringNight();
+  }
+}
+
+void lightDuringNight() { // обробка нічного режиму 
+  if (isTurnedOffSystem) {
+    Serial.println("System OFF ");
+    clear();
+    show();
+    return;
+  }
+  TurnOffAnimated(BRIGHTNESS_LIGHT_AT_NIGHT);
+  clear();
+  FOR_i(0, NUMBER_OF_STEPS) {
+    if (steps[i].night_mode_bitmask) {
+      steps[i].night_mode_bitmask = (uint16_t) steps[i].night_mode_bitmask >> 1 | steps[i].night_mode_bitmask << 15;
+      ApplyBitMaskToSteps(i, COLOR_AT_NIGHT, steps[i].night_mode_bitmask); // накладаємо бітову маску на поточну сходинку 
+    }
+  }
+  TurnOnAnimated(BRIGHTNESS_LIGHT_AT_NIGHT);
+}
+
+void TimeoutOperations() { // обробка таймаутів через які вкл/викл система 
+  if (millis() - timeoutCounter >= (TIMEOUT * 1000L)) {
+    isturnedOnSystem = true;
+    if (direction_of_effects == 1) {
+      stepFader(0, 1);
+    } else {
+      stepFader(1, 1);
+    }
+   lightDuringNight();
+  }
+}
+
+void MotionDetectorOperations(Motion_detector *det) { // обробка дій, що виконує детектор руху
+  if (isTurnedOffSystem) return;
+
+  int stateNext = digitalRead(det->pin);
+  if (stateNext && !det->lastState) {
+    Serial.print("PIR det ");
+    Serial.println(det->pin);
+    timeoutCounter = millis(); 
+    if (isturnedOnSystem) {
+      direction_of_effects = det->direction_of_effects;
+      if (AUTOMATIC_SWITCH_OF_EFFECTS) {
+        actual_effect = ++counter_of_effects % EFFECTS_AMOUNT;
+      }
+      stepFader(direction_of_effects == 1 ? 0 : 1,  0);
+      isturnedOnSystem = false;
+    }
+  }
+  det->lastState = stateNext;
+}
+
+// логіка зміни ефектів під час роботи системи
+void effectsOperations() {
+  static uint32_t tmr;
+  if (millis() - tmr >= speed_of_effects) {
+    tmr = millis();
+    switch (actual_effect) {
+      case COLOR: staticColor(direction_of_effects, 0, NUMBER_OF_STEPS); break;
+      case RAINBOW: rainbowstripees(-direction_of_effects, 0, NUMBER_OF_STEPS); break; 
+      case FIRE: fireStairs(direction_of_effects, 0, 0); break;
+    }
+    show();
+  }
+}
