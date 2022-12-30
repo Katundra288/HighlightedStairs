@@ -141,5 +141,6 @@ void stairsFire(int8_t boo, byte b1, byte b2) {
     }
   }
   c += 10;
+
 }
 
