@@ -79,3 +79,16 @@ void effederStep(bool boo, bool onof) {
        strip.show();
      }
    }
+
+CRGB color_of_fire_getter(int i) {
+  return CHSV(
+           BEG_FIRE_COLOR + map(i, 0, 255, 0, GAP), // H
+           constrain(map(i, 0, 255, SATURATION_MAX, SATURATION_MIN), 0, 255),// S
+           constrain(map(i, 0, 255, BRIGHTNESS_MIN, BRIGHTNESS_MAX), 0, 255) // V
+                  );
+}
+
+
+
+
+}
