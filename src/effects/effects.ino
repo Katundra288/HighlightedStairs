@@ -39,19 +39,21 @@ void effederStep(bool boo, bool onof) {
           case FIRE:
             if (onof) {
               int newBright = brightness_at_moment;
-              while (1) {
-                EACH_MILI(50) {
-                  newBright -= 5;
-                  if (newBright < 0) break;
-                  strip.setBrightness(newBright);
-                  stairsFire(0, 0, 0);
-                  strip.show();
-                }
+
+              while(1){
+              EACH_MILI(50){
+
+              newBright -=5;
+              if(newBright < 0) break;
+              strip.setBrightness(newBright);
+              stairsFire(0,0,0);
+              strip.show();
+              }
               }
               strip.clear();
               strip.setBrightness(brightness_at_moment);
               strip.show();
-            } else {
+              } else {
               int newBright = 0;
               strip.setBrightness(0);
               while (1) {
