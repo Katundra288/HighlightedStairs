@@ -84,5 +84,58 @@ CRGB color_of_fire_getter(int i) {
 }
 
 
+// fill the stair with a color
+void addColor(int8_t i, LEDdata f) {
+  if (i >= NUM_OF_STEPS  i < 0) return;
+  FOR_i(i * NUM_OF_CHIPS_PER_STAIR, i * NUM_OF_CHIPS_PER_STAIR + NUM_OF_CHIPS_PER_STAIR) {
+    buf_leds[i] = f;
+  }
+}
+
+uint32_t color_of_pixel_get(CRGB p) {
+  return (((uint32_t)p.r << 16) | (p.g << 8) | p.b);
+}
+
+
+
+// usual change of a color (static)
+void usualStaticColor(int8_t boo, byte b1, byte b2) {
+  speed_of_effects = 100;
+  byte current;
+  static byte countCol = 0;
+  countCol += 2;
+  FOR_i(0, NUM_OF_STEPS) {
+    current = 255;
+    if (i < b1  i >= b2) current = 0;
+    addColor(i, mHSV(countCol, 255, current));
+  }
+}
+
+// rainbow effect
+void effectRainbow(int8_t boo, byte b1, byte b2) {
+  speed_of_effects = 40;
+  static byte countCol = 0;
+  countCol += 2;
+  byte current;
+  FOR_i(0, NUM_OF_STEPS) {
+    current = 255;
+    if (i < b1 || i >= b2) current = 0;
+    addColor((boo > 0) ? (i) : (NUM_OF_STEPS - 1 - i),
+     mHSV(countCol + (float)i * 255 / NUM_OF_STEPS, 255, current));
+  }
+}
+
+void stairsFire(int8_t boo, byte b1, byte b2) {
+  speed_of_effects = 30;
+  static uint16_t c = 0;
+  FOR_i(0, NUM_OF_CHIPS_PER_STAIR) {
+    FOR_j(0, NUM_OF_STEPS) {
+      strip.setPix(i, j, mHEX(color_of_pixel_get(Colorb1Palette(
+                                            paletFire,
+                                            (inoise8(i * STEP_FOR_FIRE, j * STEP_FOR_FIRE, counter)),
+                                            255, LINEARBLEND))));
+    }
+  }
+  c += 10;
 }
 
