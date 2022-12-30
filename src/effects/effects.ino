@@ -10,6 +10,7 @@
 void effederStep(bool boo, bool onof) {
   // boo - напрямок 0(назад) 1(вперед)
   // onof - стан 1 (вкл) 0 (вимк)
+
   byte counter = 0;
    byte c = onof | (boo << 1);
 
