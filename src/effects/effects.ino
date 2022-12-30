@@ -101,17 +101,17 @@ uint32_t color_of_pixel_get(CRGB p) {
 
 
 // usual change of a color (static)
-void usualStaticColor(int8_t boo, byte b1, byte b2) {
-  speed_of_effects = 100;
-  byte current;
-  static byte countCol = 0;
-  countCol += 2;
-  FOR_i(0, NUM_OF_STEPS) {
-    current = 255;
-    if (i < b1  i >= b2) current = 0;
-    addColor(i, mHSV(countCol, 255, current));
-  }
-}
+ void usualStaticColor(int8_t boo, byte b1, byte b2) {
+   speed_of_effects = 100;
+   byte current;
+   static byte countCol = 0;
+   countCol += 2;
+   FOR_i(0, NUM_OF_STEPS) {
+     current = 255;
+     if (i < b1  i >= b2) current = 0;
+     addColor(i, mHSV(countCol, 255, current));
+   }
+ }
 
 // rainbow effect
 void effectRainbow(int8_t boo, byte b1, byte b2) {
