@@ -13,25 +13,26 @@ void effederStep(bool boo, bool onof) {
   byte counter = 0;
   byte c = onof | (boo << 1);
 
+
   while (1) {
-      EACH_MILI(SPEED) {
-        counter++;
-        switch (effect_at_the_moment) {
-          case COLOR:
-            switch (c) {
-              case 0: usualStaticColor(1, 0, counter); break;
-              case 1: usualStaticColor(1, counter, NUM_OF_STEPS); break;
-              case 2: usualStaticColor(-1, NUM_OF_STEPS - counter, NUM_OF_STEPS); break;
-              case 3: usualStaticColor(-1, 0, NUM_OF_STEPS - counter); break;
-            }
-            break;
-          case RAINBOW:
-            switch (c) {
-              case 0: effectRainbow(-1, NUM_OF_STEPS - counter, NUM_OF_STEPS); break;
-              case 1: effectRainbow(-1, 0, NUM_OF_STEPS - counter); break;
-              case 2: effectRainbow(1, NUM_OF_STEPS - counter, NUM_OF_STEPS); break;
-              case 3: effectRainbow(1, 0, NUM_OF_STEPS - counter); break;
-            }
+        EACH_MILI(SPEED) {
+          counter++;
+          switch (effect_at_the_moment) {
+            case COLOR:
+              switch (c) {
+                case 0: usualStaticColor(1, 0, counter); break;
+                case 1: usualStaticColor(1, counter, NUM_OF_STEPS); break;
+                case 2: usualStaticColor(-1, NUM_OF_STEPS - counter, NUM_OF_STEPS); break;
+                case 3: usualStaticColor(-1, 0, NUM_OF_STEPS - counter); break;
+              }
+              break;
+            case RAINBOW:
+              switch (c) {
+                case 0: effectRainbow(-1, NUM_OF_STEPS - counter, NUM_OF_STEPS); break;
+                case 1: effectRainbow(-1, 0, NUM_OF_STEPS - counter); break;
+                case 2: effectRainbow(1, NUM_OF_STEPS - counter, NUM_OF_STEPS); break;
+                case 3: effectRainbow(1, 0, NUM_OF_STEPS - counter); break;
+              }
             break;
           case FIRE:
             if (onof) {
@@ -69,11 +70,11 @@ void effederStep(bool boo, bool onof) {
       if (counter == NUM_OF_STEPS) break;
     }
   }
-  if (onof == 1) {
-    strip.clear();
-    strip.show();
-  }
-}
+   if (onof == 1) {
+     strip.clear();
+     strip.show();
+   }
+ }
 
 CRGB color_of_fire_getter(int i) {
   return CHSV(
