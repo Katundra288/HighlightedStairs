@@ -113,6 +113,7 @@ uint32_t color_of_pixel_get(CRGB p) {
    }
  }
 
+
 // rainbow effect
 void effectRainbow(int8_t boo, byte b1, byte b2) {
   speed_of_effects = 40;
