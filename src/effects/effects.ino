@@ -89,7 +89,7 @@ CRGB color_of_fire_getter(int i) {
 }
 
 
-// fill the stair with a color
+// заповніть сходи кольором
 void addColor(int8_t i, LEDdata f) {
   if (i >= NUM_OF_STEPS  i < 0) return;
   FOR_i(i * NUM_OF_CHIPS_PER_STAIR, i * NUM_OF_CHIPS_PER_STAIR + NUM_OF_CHIPS_PER_STAIR) {
@@ -101,7 +101,7 @@ uint32_t color_of_pixel_get(CRGB p) {
   return (((uint32_t)p.r << 16) | (p.g << 8) | p.b);
 }
 
-// usual change of a color (static)
+// звичайна зміна кольору (статична)
  void usualStaticColor(int8_t boo, byte b1, byte b2) {
    speed_of_effects = 100;
    byte current;
@@ -115,7 +115,7 @@ uint32_t color_of_pixel_get(CRGB p) {
  }
 
 
-// rainbow effect
+// ефект веселки
 void effectRainbow(int8_t boo, byte b1, byte b2) {
   speed_of_effects = 40;
   static byte countCol = 0;
