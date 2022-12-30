@@ -12,9 +12,9 @@ void effederStep(bool boo, bool onof) {
   // onof - стан 1 (вкл) 0 (вимк)
 
   byte counter = 0;
-   byte c = onof | (boo << 1);
+  byte c = onof | (boo << 1);
 
-
+// логіка зміни ефектів під час роботи системи
   while (1) {
           EACH_MILI(SPEED) {
             counter++;
@@ -35,6 +35,7 @@ void effederStep(bool boo, bool onof) {
                   case 3: effectRainbow(1, 0, NUM_OF_STEPS - counter); break;
                 }
             break;
+// логіка зміни ефектів під час роботи системи
           case FIRE:
             if (onof) {
               int newBright = brightness_at_moment;
@@ -68,7 +69,7 @@ void effederStep(bool boo, bool onof) {
             break;
         }
       strip.show();
-      if (counter == NUM_OF_STEPS) break;
+           if (counter == NUM_OF_STEPS) break;
     }
   }
    if (onof == 1) {
@@ -97,8 +98,6 @@ void addColor(int8_t i, LEDdata f) {
 uint32_t color_of_pixel_get(CRGB p) {
   return (((uint32_t)p.r << 16) | (p.g << 8) | p.b);
 }
-
-
 
 // usual change of a color (static)
  void usualStaticColor(int8_t boo, byte b1, byte b2) {
