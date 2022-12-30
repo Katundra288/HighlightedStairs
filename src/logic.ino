@@ -1,257 +1,184 @@
-// структура, що описує одну сходинку 
-struct OneStep {
-  int8_t number_of_leds;
-  uint16_t bitmask_for_night_mode;  
-};
-
-#define OVERALL_NUMBER_OF_LEDS 256  // загальна кількість неонів для проекту  
-#define NUMBER_OF_STEPS 16        // загальна кількість сходинок 
-
-// Опис всіх сходинок з опцією "нічна підсвітка"
- //  0b0100100100100100 - кожний третій чіп буде активовано під час нічного режиму 
- // 0b0000000000000000 - нічний режим не активовано
-OneStep steps[NUMBER_OF_STEPS] = { 
-{ 16, 0b0100100100100100 },   
-{ 16, 0b0000000000000000 },   
-{ 16, 0b0100100100100100 },   
-{ 16, 0b0000000000000000 },   
-{ 16, 0b0100100100100100 },   
-{ 16, 0b0000000000000000 },   
-{ 16, 0b0100100100100100 },   
-{ 16, 0b0000000000000000 },   
-{ 16, 0b0100100100100100 },   
-{ 16, 0b0000000000000000 },   
-{ 16, 0b0100100100100100 },   
-{ 16, 0b0000000000000000 },   
-{ 16, 0b0100100100100100 },   
-{ 16, 0b0000000000000000 },   
-{ 16, 0b0100100100100100 },   
-{ 16, 0b0100100100100100 }    
-};
-
-#define DEFAULT_BRIGHTNESS 1 // початково втсановлена яскравість
-#define BRIGHTNESS 100  // яскравість, яку можна встановлювати вручну
-#define SPEED_SWITCH 300         // швидкість переключення з одної сходинки на іншу менше = швидше 
-#define INITIAL_EFFECT RAINBOW   // режим, з якого починається робота 
-#define AUTOMATIC_SWITCH_OF_EFFECTS 1      // зміна ефектів 
-#define TIMEOUT 15            // виклчення сходинок через 15 секунд, як рух було задокументовано 
-#define COLOR_AT_NIGHT mCOLOR(WHITE)  // колір сходинок вночі 
-#define BRIGHTNESS_LIGHT_AT_NIGHT 50  // яскравість підсвітки у діапазоні 0 -255
-#define MAX_OF_RESISTOR_AT_NIGHT 500   // максимальне значення при якому підсвітка відключається вночі 
-#define HIGHLIGHT_OF_RAILS 0      // флажок для підствінки перил
-#define HIGHLIGHT_OF_RAILS_LED_AMOUNT 75    // кількість чипів на перилах
-#define SWITCH_BUTTON  0      // кнопка для переключення ефектів 
-
-// значення пінів 
-#define MOTION_DETECTOR_START 3   
-#define MOTION_DETECTOR_END 2     
-#define STAIRS_PIN 12     
-#define HIGHLIGHT_OF_RAILS_PIN 11   
-#define PHOTORES_PIN A0     
-#define SWITCH_BUTTON_PIN 6     // пін для кнопки переключення ефектів 
-#define ORDER_BGR       // порядок кольорів 
-#define DEBTH_OF_A_COLOR 2   // глибина кольору 
-
 #include <microLED.h>
-#include <FastLED.h> 
+#include "libraries/FastLED-3.2.9/FastLED.h"
+// pins
+#define BEGIN_STAIRS_PIN 3 // a start of stairs 
+#define FINISH_STAIRS_PIN 2 // end of stairs 
+#define STRIPE_PIN 12   // pin for stripe 
+#define PHOTO_RES_PIN A0 // pin fot photores
+#define NUM_OF_STEPS 8     // загальна кількість схожинок 
+#define NUM_OF_CHIPS_PER_STAIR 17    // number of chips per one stair 
+#define BRIGHNESS_DEFAULT 0     // brightness default
+#define BRIGHTNESS_CUSTOMIZABLE 40  // brightness that can be customized 
+#define SPEED 500
+#define BEG_EFFECT RAINBOW    // the effect from which the effects changing starts 
+#define EFFECTS_CHANGE 0      // automatic change of the effects 
+#define TIMEOUT 15            // if last detector hadn`t worked - use this timeout 
+#define SEUENCE_BGR       // the possible sequence of the colors 
+#define DEPTH_OF_A_COLOR 2   // the depth of the color
+#define NUM_OF_DIODS NUM_OF_STEPS * NUM_OF_CHIPS_PER_STAIR // number of needed diods 
 
-#if (SWITCH_BUTTON == 1) // якщо маємо кнопку для зміни ефектів, то підключаємо додаткову бібліотеку 
-#include <GyverSWITCH_BUTTON.h>
-#endif
-
-// макроси 
+#define EACH_MILI(mm) \
+  static uint32_t y;\
+  bool boo = millis() - y >= (mm);\
+  if (boo) y = millis();\
+  if (boo)
 #define FOR_i(from, to) for(int i = (from); i < (to); i++)
 #define FOR_j(from, to) for(int j = (from); j < (to); j++)
 #define FOR_k(from, to) for(int k = (from); k < (to); k++)
-#define TIMER(x) \
-  static uint32_t tmr;\
-  bool B = millis() - tmr >= (x);\
-  if (B) tmr = millis();\
-  if (B) 
 
-
-int HIGHLIGHT_OF_RAILSSegmentLength = HIGHLIGHT_OF_RAILS_LED_AMOUNT / NUMBER_OF_STEPS;   // кількість чипів на сегмент стрічки на перилах
-
-LEDdata stripeeLed[OVERALL_NUMBER_OF_LEDS];  // буфер стрічки сходинок
-microLED stripe(stripeeLed, OVERALL_NUMBER_OF_LEDS, STAIRS_PIN);  // об.єкт стрічка
-
-#if (HIGHLIGHT_OF_RAILS == 1)
-LEDdata HIGHLIGHT_OF_RAILSLEDs[HIGHLIGHT_OF_RAILS_LED_AMOUNT];  // буфер стрічки перил
-microLED HIGHLIGHT_OF_RAILS(HIGHLIGHT_OF_RAILSLEDs, HIGHLIGHT_OF_RAILS_LED_AMOUNT, HIGHLIGHT_OF_RAILS_PIN);  // стрічка
-#endif
-
+enum {S_IDLE, S_WORK} state_of_a_system = S_IDLE;
+enum {COLOR, RAINBOW, FIRE} effect_at_the_moment = BEG_EFFECT;
+#define NUM_OF_EFFECTS 3
+byte count_for_effects;
+LEDdata buf_leds[NUM_OF_DIODS];  // bufer for stripes 
+microLED strip(buf_leds, STRIPE_PIN, NUM_OF_CHIPS_PER_STAIR, NUM_OF_STEPS, ZIGZAG, LEFT_BOTTOM, DIR_RIGHT);  // matrix
 int speed_of_effects;
-int8_t direction_of_effects;
-byte actual_brightness = BRIGHTNESS;
-enum {COLOR, RAINBOW, FIRE, EFFECTS_AMOUNT} actual_effect = INITIAL_EFFECT;
-byte counter_of_effects;
-uint32_t timeoutCounter;
-bool isturnedOnSystem;
-bool isTurnedOffSystem;
-int first_step[NUMBER_OF_STEPS];
-
-struct Motion_detector { // структура, що описує датчик руху
-  int8_t direction_of_effects;
-  int8_t pin;
-  bool lastState;
-};
-
-Motion_detector startMotion_detector = { 1, MOTION_DETECTOR_START, false};
-Motion_detector endMotion_detector = { -1, MOTION_DETECTOR_END, false};
-
-CRGBPalette16 ColorsFire;
-int8_t minimalLength_OfStep = steps[0].led_amount;
-
-#if (SWITCH_BUTTON == 1)
-GSWITCH_BUTTON SWITCH_BUTTON(SWITCH_BUTTON_PIN);
-#endif
+int8_t direction_effects;
+byte brightness_at_moment = BRIGHTNESS_CUSTOMIZABLE;
+int counter = 0;
+CRGBPalette16 paletFire;
 
 void setup() {
   Serial.begin(9600);
-  setBrightness(actual_brightness);    
-  clear();
-  show();  
-  
-#if (SWITCH_BUTTON == 1)
-  SWITCH_BUTTON.setType(HIGH_PULL);
-  SWITCH_BUTTON.setDirection(NORM_OPEN);
-  SWITCH_BUTTON.setDebounce(100);     // налаштування антимигання
-  SWITCH_BUTTON.setTimeout(700);      
-  SWITCH_BUTTON.setClickTimeout(600); // таймаут між кліками
-#endif
-
-  ColorsFire = CRGBPalette16(
-                  getFireColor(0 * 16),
-                  getFireColor(1 * 16),
-                  getFireColor(2 * 16),
-                  getFireColor(3 * 16),
-                  getFireColor(4 * 16),
-                  getFireColor(5 * 16),
-                  getFireColor(6 * 16),
-                  getFireColor(7 * 16),
-                  getFireColor(8 * 16),
-                  getFireColor(9 * 16),
-                  getFireColor(10 * 16),
-                  getFireColor(11 * 16),
-                  getFireColor(12 * 16),
-                  getFireColor(13 * 16),
-                  getFireColor(14 * 16),
-                  getFireColor(15 * 16)
+  strip.setBrightness(brightness_at_moment);    
+  strip.clear();
+  strip.show();
+  paletFire = CRGBPalette16(
+                  color_of_fire_getter(0 * 16),
+                  color_of_fire_getter(1 * 16),
+                  color_of_fire_getter(2 * 16),
+                  color_of_fire_getter(3 * 16),
+                  color_of_fire_getter(4 * 16),
+                  color_of_fire_getter(5 * 16),
+                  color_of_fire_getter(6 * 16),
+                  color_of_fire_getter(7 * 16),
+                  color_of_fire_getter(8 * 16),
+                  color_of_fire_getter(9 * 16),
+                  color_of_fire_getter(10 * 16),
+                  color_of_fire_getter(11 * 16),
+                  color_of_fire_getter(12 * 16),
+                  color_of_fire_getter(13 * 16),
+                  color_of_fire_getter(14 * 16),
+                  color_of_fire_getter(15 * 16)
                 );
-  // вираховування мінімальної ширини для сходинки, щоб ефект вогню працював коректно 
-  first_step[0] = 0;
-  FOR_i(1, NUMBER_OF_STEPS) {
-    if (steps[i].led_amount < minimalLength_OfStep) {
-      minimalLength_OfStep = steps[i].led_amount;
-    }
-    first_step[i] = first_step[i-1] + steps[i-1].led_amount; // рахуємо стартові позиції для кожної сходинки
-  }
   delay(100);
-  clear();
-  show();
+  strip.clear();
+  strip.show();
 }
 
-void cyclicOperations() { // запускання ефектів, якщо стан системи не самий початковий або найостанніший 
-  switchButtonOperations();
-  MotionDetectorOperations(&startMotion_detector);
-  MotionDetectorOperations(&endMotion_detector);
-  if (isturnedOnSystem || isTurnedOffSystem) {
-    photoResistorOperations();
-    handl lightDuringNightOperation();
-    delay(50);
-  } else {
-    effectsOperations();
-    TimeoutOperations();
-  }
+void cycle() {
+  brightness_getter();
+  analyze_sensors();
+  changing_of_effects();
 }
 
-void switchButtonOperations() { // обробка кнопки включення/виключення 
-#if (SWITCH_BUTTON == 1)
-  SWITCH_BUTTON.tick();
-  if (SWITCH_BUTTON.isClick() || SWITCH_BUTTON.isHolded())
-    actual_effect = ++counter_of_effects % EFFECTS_AMOUNT;
-#endif
-}
-
-void photoResistorOperations() {// обробка дій фоторезистора   
-#if DEFAULT_BRIGHTNESS == 1
-  TIMER(3000) {            
-    int detector = analogRead(PHOTORES_PIN);
-    Serial.print("Photo resistor ");
-    Serial.println(detector);
-    isTurnedOffSystem = detector > MAX_OF_RESISTOR_AT_NIGHT;
-    actual_brightness = isTurnedOffSystem ? 0 : map(detector, 30, 800, 10, 200);
-    setBrightness(actual_brightness);
+void brightness_getter() {
+#if (BRIGHNESS_DEFAULT == 1)
+  if (state_of_a_system == S_IDLE) {  
+    EACH_MILI(3000) {          
+      Serial.println(analogRead(PHOTO_RES_PIN));
+      brightness_at_moment = map(analogRead(PHOTO_RES_PIN), 30, 800, 10, 200);
+      strip.setBrightness(brightness_at_moment);
+    }
   }
 #endif
 }
 
-void lightDuringNightOperation() { 
-  TIMER(60000) {
-   lightDuringNight();
-  }
-}
+// getting info from sensors 
+void analyze_sensors() {
+  static bool boo1 = false;
+  static bool boo2 = false;
+  static uint32_t count_time;
 
-void lightDuringNight() { // обробка нічного режиму 
-  if (isTurnedOffSystem) {
-    Serial.println("System OFF ");
-    clear();
-    show();
-    return;
-  }
-  TurnOffAnimated(BRIGHTNESS_LIGHT_AT_NIGHT);
-  clear();
-  FOR_i(0, NUMBER_OF_STEPS) {
-    if (steps[i].night_mode_bitmask) {
-      steps[i].night_mode_bitmask = (uint16_t) steps[i].night_mode_bitmask >> 1 | steps[i].night_mode_bitmask << 15;
-      ApplyBitMaskToSteps(i, COLOR_AT_NIGHT, steps[i].night_mode_bitmask); // накладаємо бітову маску на поточну сходинку 
-    }
-  }
-  TurnOnAnimated(BRIGHTNESS_LIGHT_AT_NIGHT);
-}
-
-void TimeoutOperations() { // обробка таймаутів через які вкл/викл система 
-  if (millis() - timeoutCounter >= (TIMEOUT * 1000L)) {
-    isturnedOnSystem = true;
-    if (direction_of_effects == 1) {
-      stepFader(0, 1);
-    } else {
-      stepFader(1, 1);
-    }
-   lightDuringNight();
-  }
-}
-
-void MotionDetectorOperations(Motion_detector *det) { // обробка дій, що виконує детектор руху
-  if (isTurnedOffSystem) return;
-
-  int stateNext = digitalRead(det->pin);
-  if (stateNext && !det->lastState) {
-    Serial.print("PIR det ");
-    Serial.println(det->pin);
-    timeoutCounter = millis(); 
-    if (isturnedOnSystem) {
-      direction_of_effects = det->direction_of_effects;
-      if (AUTOMATIC_SWITCH_OF_EFFECTS) {
-        actual_effect = ++counter_of_effects % EFFECTS_AMOUNT;
+  if (state_of_a_system == S_WORK && millis() - count_time >= (TIMEOUT * 1000L)) {
+    state_of_a_system = S_IDLE;
+    int newBrightness = brightness_at_moment;
+    while (1) {
+      EACH_MILI(50) {
+        newBrightness -= 5;
+        if (newBrightness < 0) break;
+        strip.setBrightness(newBrightness);
+        strip.show();
       }
-      stepFader(direction_of_effects == 1 ? 0 : 1,  0);
-      isturnedOnSystem = false;
+    }
+    strip.clear();
+    strip.setBrightness(brightness_at_moment);
+    strip.show();
+  }
+
+  EACH_MILI(50) {
+    // end sensor 
+    if (digitalRead(FINISH_STAIRS_PIN)) {
+      if (!boo2) {
+        boo2 = true;
+        count_time = millis();
+        if (state_of_a_system == S_IDLE) {
+          direction_effects = -1;
+          if (EFFECTS_CHANGE) {
+            if (++count_for_effects >= NUM_OF_EFFECTS){ 
+              count_for_effects = 0;}
+            effect_at_the_moment = count_for_effects;
+          }
+        }
+        switch (state_of_a_system) {
+          case S_IDLE: effederStep(1, 0); state_of_a_system = S_WORK; break;
+          case S_WORK:
+            if (direction_effects == 1) {
+              effederStep(0, 1); 
+              state_of_a_system = S_IDLE;
+              strip.clear(); 
+              strip.show(); 
+              return;
+            } break;
+        }
+      }
+    } else {
+      if (boo2) {boo2 = false;}
+    }
+
+    // beginning sensor
+    if (digitalRead(BEGIN_STAIRS_PIN)) {
+      if (!boo1) {
+        boo1 = true;
+        count_time = millis();
+        if (state_of_a_system == S_IDLE) {
+          direction_effects = 1;
+          if (EFFECTS_CHANGE) {
+            if (++count_for_effects >= NUM_OF_EFFECTS){count_for_effects = 0;}
+            effect_at_the_moment = count_for_effects;
+          }
+        }
+        switch (state_of_a_system) {
+          case S_IDLE: effederStep(0, 0); state_of_a_system = S_WORK; break;
+          case S_WORK:
+            if (direction_effects == -1) {
+              effederStep(1, 1); 
+              state_of_a_system = S_IDLE;
+              strip.clear(); 
+              strip.show(); 
+              return;
+            } break;
+        }
+      }
+    } else {
+      if (boo1) boo1 = false;
     }
   }
-  det->lastState = stateNext;
 }
 
-// логіка зміни ефектів під час роботи системи
-void effectsOperations() {
-  static uint32_t tmr;
-  if (millis() - tmr >= speed_of_effects) {
-    tmr = millis();
-    switch (actual_effect) {
-      case COLOR: staticColor(direction_of_effects, 0, NUMBER_OF_STEPS); break;
-      case RAINBOW: rainbowstripees(-direction_of_effects, 0, NUMBER_OF_STEPS); break; 
-      case FIRE: fireStairs(direction_of_effects, 0, 0); break;
+// changing the effects during the process of working 
+void changing_of_effects() {
+  if (state_of_a_system == S_WORK) {
+    static uint32_t tt;
+    if (millis() - tt >= speed_of_effects) {
+      tt = millis();
+      switch (effect_at_the_moment) {
+        case COLOR: usualStaticColor(direction_effects, 0, NUM_OF_STEPS); break;
+        case RAINBOW: effectRainbow(-direction_effects, 0, NUM_OF_STEPS); break; 
+        case FIRE: stairsFire(direction_effects, 0, 0); break;
+      }
+      strip.show();
     }
-    show();
   }
 }
+
